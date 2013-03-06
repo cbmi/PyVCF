@@ -72,7 +72,8 @@ _Contig = collections.namedtuple('Contig', ['id', 'length'])
 
 class _vcf_metadata_parser(object):
     '''Parse the metadat in the header of a VCF file.'''
-    def __init__(self):
+    def __init__(self, dict_type):
+        self.dict_type = dict_type
         super(_vcf_metadata_parser, self).__init__()
         self.info_pattern = re.compile(r'''\#\#INFO=<
             ID=(?P<id>[^,]+),
@@ -159,7 +160,7 @@ class _vcf_metadata_parser(object):
                        match.group('type'), match.group('desc'))
 
         return (match.group('id'), form)
-    
+
     def read_contig(self, contig_string):
         '''Read a meta-contigrmation INFO line.'''
         match = self.contig_pattern.match(contig_string)
@@ -179,7 +180,7 @@ class _vcf_metadata_parser(object):
         # Removing initial hash marks and final equal sign
         key = items[0][2:-1]
         # N.B., items can have quoted values, so cannot just split on comma
-        val = OrderedDict()
+        val = self.dict_type()
         state = 0
         k = ''
         v = ''
@@ -223,7 +224,7 @@ class Reader(object):
     """ Reader for a VCF v 4.0 file, an iterator returning ``_Record objects`` """
 
     def __init__(self, fsock=None, filename=None, compressed=False, prepend_chr=False,
-                 strict_whitespace=False):
+                 strict_whitespace=False, preserve_order=False):
         """ Create a new Reader for a VCF file.
 
             You must specify either fsock (stream) or filename.  Gzipped streams
@@ -237,6 +238,8 @@ class Reader(object):
             spec) which allows you to parse files with spaces in the sample names.
         """
         super(Reader, self).__init__()
+
+        self.dict_type = OrderedDict if preserve_order else dict
 
         if not (fsock or filename):
             raise Exception('You must provide at least fsock or filename')
@@ -292,9 +295,9 @@ class Reader(object):
         The end user shouldn't have to use this.  She can access the metainfo
         directly with ``self.metadata``.'''
         for attr in ('metadata', 'infos', 'filters', 'alts', 'contigs', 'formats'):
-            setattr(self, attr, OrderedDict())
+            setattr(self, attr, self.dict_type())
 
-        parser = _vcf_metadata_parser()
+        parser = _vcf_metadata_parser(self.dict_type)
 
         line = self.reader.next()
         while line.startswith('##'):
@@ -315,7 +318,7 @@ class Reader(object):
             elif line.startswith('##FORMAT'):
                 key, val = parser.read_format(line)
                 self.formats[key] = val
-            
+
             elif line.startswith('##contig'):
                 key, val = parser.read_contig(line)
                 self.contigs[key] = val
@@ -350,7 +353,7 @@ class Reader(object):
             return {}
 
         entries = info_str.split(';')
-        retdict = OrderedDict()
+        retdict = self.dict_type()
 
         for entry in entries:
             entry = entry.split('=')

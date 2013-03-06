@@ -1,7 +1,8 @@
 PyVCF.egg-info
 build
 dist
-*.pyc
+*.sw?
+*.py?
 docs/_build
 .ropeproject
 1kg.prof
