@@ -224,7 +224,7 @@ class Reader(object):
     """ Reader for a VCF v 4.0 file, an iterator returning ``_Record objects`` """
 
     def __init__(self, fsock=None, filename=None, compressed=False, prepend_chr=False,
-                 strict_whitespace=False, preserve_order=False):
+                 strict_whitespace=False, preserve_order=True):
         """ Create a new Reader for a VCF file.
 
             You must specify either fsock (stream) or filename.  Gzipped streams
@@ -236,6 +236,11 @@ class Reader(object):
 
             'strict_whitespace=True' will split records on tabs only (as with VCF
             spec) which allows you to parse files with spaces in the sample names.
+
+            'preserve_order=True' will use an OrderedDict instead of a regular
+            dict to preserve the order of the record's fields and INFO data.
+            Note, at large sizes there are performance implications to
+            preserving the order.
         """
         super(Reader, self).__init__()
 
